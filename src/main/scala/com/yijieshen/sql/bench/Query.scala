@@ -68,7 +68,7 @@ class Query(
 
       val breakdownResults = if (includeBreakdown) {
         val depth = queryExecution.executedPlan.collect { case p: SparkPlan => p }.size
-        val physicalOperators = (0 until depth).map(i => (i, queryExecution.executedPlan(i))).filter(case (i: Int, p: SparkPlan) => p.shouldReuseRowBatch)
+        val physicalOperators = (0 until depth).map(i => (i, queryExecution.executedPlan(i)))
         val indexMap = physicalOperators.map { case (index, op) => (op, index) }.toMap
         val timeMap = new scala.collection.mutable.HashMap[Int, Double]
 
@@ -86,11 +86,7 @@ class Query(
             }
 
             val executionTime = measureTimeMs {
-              if (newNode.outputsRowBatches) {
-                newNode.batchExecute().foreach((batch: Any) => Unit)
-              } else {
-                newNode.execute().foreach((row: Any) => Unit)
-              }
+              newNode.execute().foreach((row: Any) => Unit)
             }
             timeMap += ((index, executionTime))
 
@@ -121,7 +117,7 @@ class Query(
           case ExecutionMode.CollectResults => dataFrame.rdd.collect()
           case ExecutionMode.ForeachResults => dataFrame.rdd.foreach { row => Unit }
           case ExecutionMode.WriteParquet(location) =>
-            dataFrame.saveAsParquetFile(s"$location/$name.parquet")
+            dataFrame.write.parquet(s"$location/$name.parquet")
           case ExecutionMode.HashResults =>
             val columnStr = dataFrame.schema.map(_.name).mkString(",")
             // SELECT SUM(HASH(col1, col2, ...)) FROM (benchmark query)

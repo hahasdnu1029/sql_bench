@@ -72,8 +72,8 @@ object AggBench {
       .agg(aggs)
     val qe = result.queryExecution
     val depth = qe.executedPlan.collect { case p: SparkPlan => p }.size
-    val physicalOperators = (0 until depth).map(i => qe.executedPlan(i))
-    val plan = physicalOperators(2)
+    val physicalOperators = (0 until depth).map(i => qe.executedPlan(i).asInstanceOf[SparkPlan])
+    val plan = physicalOperators(4)
 
 
     if (config.mode.equals("EXP")) {

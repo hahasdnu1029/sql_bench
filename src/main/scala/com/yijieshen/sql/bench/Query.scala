@@ -74,6 +74,7 @@ class Query(
       var executionTime: Double = 0
 
       val breakdownResults = if (includeBreakdown) {
+        /*
         val depth = queryExecution.executedPlan.collect { case p: SparkPlan => p }.size
         val physicalOperators = (0 until depth).map(i => (i, queryExecution.executedPlan(i)))
         val indexMap = physicalOperators.map { case (index, op) => (op, index) }.toMap
@@ -82,7 +83,7 @@ class Query(
         physicalOperators.reverse.take(1).map {
           case (index, node) =>
             messages += s"Breakdown: ${node.simpleString}"
-            val newNode = buildDataFrame.queryExecution.executedPlan(index)
+            val newNode = buildDataFrame.queryExecution.executedPlan(index).asInstanceOf[SparkPlan]
 
             if (new java.io.File("/home/syj/free_memory.sh").exists) {
               val commands = Seq("bash", "-c", s"/home/syj/free_memory.sh")
@@ -93,11 +94,7 @@ class Query(
             }
 
             val executionTime = measureTimeMs {
-              if (newNode.outputsRowBatches) {
-                newNode.batchExecute().foreach((batch: Any) => Unit)
-              } else {
-                newNode.execute().foreach((row: Any) => Unit)
-              }
+              newNode.execute().foreach((row: Any) => Unit)
             }
             timeMap += ((index, executionTime))
 
@@ -113,14 +110,15 @@ class Query(
               childIndexes,
               executionTime,
               executionTime - childTime)
-        }
+        } */
+        Seq.empty[BreakdownResult]
       } else {
         executionTime = measureTimeMs {
           executionMode match {
             case ExecutionMode.CollectResults => dataFrame.rdd.collect()
             case ExecutionMode.ForeachResults => dataFrame.rdd.foreach { row => Unit }
             case ExecutionMode.WriteParquet(location) =>
-              dataFrame.saveAsParquetFile(s"$location/$name.parquet")
+              dataFrame.write.parquet(s"$location/$name.parquet")
             case ExecutionMode.HashResults =>
               val columnStr = dataFrame.schema.map(_.name).mkString(",")
               // SELECT SUM(HASH(col1, col2, ...)) FROM (benchmark query)

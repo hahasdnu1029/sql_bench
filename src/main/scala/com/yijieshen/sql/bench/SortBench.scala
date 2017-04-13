@@ -83,11 +83,7 @@ object SortBench {
 
       val time = measureTimeMs {
         val plan = result.queryExecution.executedPlan
-        if (plan.outputsRowBatches) {
-          plan.batchExecute().foreach(b => Unit)
-        } else {
-          plan.execute().foreach(r => Unit)
-        }
+        plan.execute().foreach(r => Unit)
       }
       println(s"Sort takes ${time / 1000}s to finish.")
     }

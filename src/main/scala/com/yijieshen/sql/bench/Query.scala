@@ -1,13 +1,13 @@
 package com.yijieshen.sql.bench
 
 import scala.sys.process._
-
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
-
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.exchange.{BroadcastExchangeExec, ReusedExchangeExec, ShuffleExchange}
+import org.apache.spark.sql.execution.joins.BroadcastNestedLoopJoinExec
+import org.apache.spark.sql.execution.{InputAdapter, SparkPlan, TakeOrderedAndProjectExec, WholeStageCodegenExec}
 
 class Query(
   override val name: String,
@@ -69,16 +69,41 @@ class Query(
       val breakdownResults = if (includeBreakdown) {
         val depth = queryExecution.executedPlan.collect { case p: SparkPlan => p }.size
         val physicalOperators = (0 until depth).map(i => (i, queryExecution.executedPlan(i)))
+        val indexToOp = physicalOperators.toMap
         val indexMap = physicalOperators.map { case (index, op) => (op, index) }.toMap
         val timeMap = new scala.collection.mutable.HashMap[Int, Double]
 
-        physicalOperators.reverse.map {
+        def sumChildrenTime(node: SparkPlan): Double = {
+          val childIndexes = node.children.map(indexMap)
+
+          childIndexes.map {case i =>
+            if (timeMap.contains(i)) {
+              timeMap.apply(i)
+            } else {
+              indexToOp(i).map(sumChildrenTime).sum
+            }
+          }.sum
+        }
+
+        physicalOperators.filterNot {case (i, p) =>
+          p.isInstanceOf[WholeStageCodegenExec] ||
+            p.isInstanceOf[InputAdapter] ||
+            p.isInstanceOf[TakeOrderedAndProjectExec] ||
+            p.isInstanceOf[BroadcastExchangeExec] ||
+            p.isInstanceOf[ReusedExchangeExec]
+        }.reverse.map {
           case (index, node) =>
             messages += s"Breakdown: ${node.simpleString}"
-            val newNode = buildDataFrame.queryExecution.executedPlan(index)
+            val p = buildDataFrame.queryExecution.executedPlan(index)
+            val newNode = if (p.isInstanceOf[ShuffleExchange] ||
+              p.isInstanceOf[BroadcastNestedLoopJoinExec]) {
+              p
+            } else {
+              WholeStageCodegenExec(p)
+            }
 
-            if (new java.io.File("/home/netflow/free_memory.sh").exists) {
-              val commands = Seq("bash", "-c", s"/home/netflow/free_memory.sh")
+            if (new java.io.File("/home/syj/free_memory.sh").exists) {
+              val commands = Seq("bash", "-c", s"/home/syj/free_memory.sh")
               commands.!!
               System.err.println("free_memory succeed")
             } else {
@@ -91,7 +116,7 @@ class Query(
             timeMap += ((index, executionTime))
 
             val childIndexes = node.children.map(indexMap)
-            val childTime = childIndexes.map(timeMap).sum
+            val childTime =  sumChildrenTime(node)
 
             messages += s"Breakdown time: $executionTime (+${executionTime - childTime})"
 

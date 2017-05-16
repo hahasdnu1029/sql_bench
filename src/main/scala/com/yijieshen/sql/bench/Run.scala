@@ -1,9 +1,12 @@
 package com.yijieshen.sql.bench
 
 import com.yijieshen.sql.bench.tpch.{TPCH, Tables}
+import org.apache.spark.sql.execution.exchange.{BroadcastExchangeExec, ReusedExchangeExec, ShuffleExchange}
+import org.apache.spark.sql.execution.joins.BroadcastNestedLoopJoinExec
+import org.apache.spark.sql.execution.{InputAdapter, SparkPlan, TakeOrderedAndProjectExec, WholeStageCodegenExec}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.hive.HiveContext
-import org.apache.spark.{SparkContext, SparkConf}
+import org.apache.spark.{SparkConf, SparkContext}
 import scopt.OptionParser
 
 case class RunConfig(
@@ -82,6 +85,27 @@ object Run {
 
     if (config.mode.equals("EXP")) {
       tpch.explain(queries, true)
+
+      queries.foreach { q =>
+        val qe = q.newDataFrame().queryExecution
+        val depth = qe.executedPlan.collect { case p: SparkPlan => p }.size
+        val physicalOperators = (0 until depth).map(i => (i, qe.executedPlan(i)))
+        physicalOperators.filterNot { case (i, p) =>
+          p.isInstanceOf[WholeStageCodegenExec] || p.isInstanceOf[InputAdapter]
+        }.foreach { case (i, p) =>
+          if (p.isInstanceOf[TakeOrderedAndProjectExec] ||
+            p.isInstanceOf[BroadcastExchangeExec] ||
+            p.isInstanceOf[ReusedExchangeExec]) {
+            // do nothing
+          } else if (p.isInstanceOf[ShuffleExchange] ||
+            p.isInstanceOf[BroadcastNestedLoopJoinExec]) {
+            println(p)
+          } else {
+            val x = WholeStageCodegenExec(p)
+            println(x)
+          }
+        }
+      }
     } else {
       val status = tpch.runExperiment(queries, config.breakdownEnabled, config.iterations)
       status.waitForFinish(500)
@@ -107,8 +131,9 @@ object Run {
           stddev($"executionTime") as 'stdDev)
         .orderBy("name")
         .show(truncate = false)
-      current.withColumn("result", explode($"results")).select(explode($"result.breakDown")).select("col.nodeName", "col.executionTime").show(false)
+      current.withColumn("result", explode($"results")).select(explode($"result.breakDown")).select("col.nodeName", "col.nodeNameWithArgs", "col.executionTime", "col.delta").show(false)
       println(s"""Results: sqlContext.read.json("${status.resultPath}")""")
     }
+    sc.stop()
   }
 }

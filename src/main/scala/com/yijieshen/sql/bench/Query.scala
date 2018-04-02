@@ -174,6 +174,6 @@ object Query {
     name: String,
     dataFrameBuilder: => DataFrame,
     description: String): Query = {
-    new Query(name, dataFrameBuilder, description, None, ExecutionMode.CollectResults)
+    new Query(name, dataFrameBuilder, description, None, ExecutionMode.ForeachResults)
   }
 }

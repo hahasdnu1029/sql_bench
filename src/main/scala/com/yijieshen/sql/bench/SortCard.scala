@@ -1,17 +1,21 @@
 package com.yijieshen.sql.bench
 
-import scala.sys.process._
+import org.apache.spark.sql.catalyst.InternalRow
 
+import scala.sys.process._
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.sql.functions._
 import scopt.OptionParser
 
-case class SortConfig(end: Long = 0, p: Int = 0, scn: Int = 0, cn: Int = 0, mode: String = "EXEC")
+import scala.util.Random
 
-object SortBench {
+case class SortCardConfig(end: Long = 0, p: Int = 0, fc: Int = 0, sc: Int = 0, cn: Int = 0, mode: String = "EXEC")
+
+object SortCard {
+
   def main(args: Array[String]): Unit = {
-    val parser = new OptionParser[SortConfig](SortBench.getClass.getCanonicalName.stripSuffix("$")) {
+    val parser = new OptionParser[SortCardConfig](SortBench.getClass.getCanonicalName.stripSuffix("$")) {
       head("Sort Operator Benchmark")
       opt[Long]('e', "end")
         .action((x, c) => c.copy(end = x))
@@ -19,9 +23,12 @@ object SortBench {
       opt[Int]('p', "partition")
         .action((x, c) => c.copy(p = x))
         .text("num of tasks to sort")
-      opt[Int]('s', "sortColumnNum")
-        .action((x, c) => c.copy(scn = x))
-        .text("num of sort by columns")
+      opt[Int]('f', "fsc")
+        .action((x, c) => c.copy(fc = x))
+        .text("first sort key cardinality")
+      opt[Int]('s', "ssc")
+        .action((x, c) => c.copy(sc = x))
+        .text("second sort key cardinality")
       opt[Int]('n', "columnNum")
         .action((x, c) => c.copy(cn = x))
         .text("num of non sort by columns")
@@ -36,7 +43,7 @@ object SortBench {
       help("help")
         .text("print this usage text")
     }
-    parser.parse(args, SortConfig()) match {
+    parser.parse(args, SortCardConfig()) match {
       case Some(config) => run(config)
       case None => System.exit(1)
     }
@@ -50,19 +57,24 @@ object SortBench {
     (endTime - startTime).toDouble / 1000000
   }
 
-  def run(config: SortConfig): Unit = {
-    val conf = new SparkConf().setAppName("SortBench")
+  def run(config: SortCardConfig): Unit = {
+    val conf = new SparkConf().setAppName("SortCard")
     val sc = SparkContext.getOrCreate(conf)
     val sqlContext = new HiveContext(sc)
     import sqlContext.implicits._
 
-    val sortColumns = (0 until config.scn).map(i => rand(i).as(s"s_$i"))
-    val sortColumnNames = (0 until config.scn).map(i => s"s_$i")
+    val sortColumns = randInt(Random.nextInt(), config.fc).as("s_0") :: randInt(Random.nextInt(), config.sc).as("s_1") :: Nil
     val otherColumns = (0 until config.cn).map(i => $"id".as(s"o_$i"))
 
     val result = sqlContext.range(0, config.end, 1, config.p)
-      .select(sortColumns ++ otherColumns :_*)
-      .sortWithinPartitions(sortColumnNames.head, sortColumnNames.tail :_*)
+      .select(sortColumns ++ otherColumns: _*)
+      .sortWithinPartitions("s_0", "s_1")
+
+//    val columnStr = result.schema.map(_.name).mkString(",")
+//
+//    val xxx = result.selectExpr(s"hash($columnStr) as hashValue")
+//      .groupBy()
+//      .sum("hashValue")
 
     if (config.mode.equals("EXP")) {
       result.explain(true)
@@ -75,12 +87,14 @@ object SortBench {
         System.err.println("free_memory script doesn't exists")
       }
 
+
+
       val time = measureTimeMs {
         val plan = result.queryExecution.executedPlan
         if (plan.outputsRowBatches) {
           plan.batchExecute().foreach(b => Unit)
         } else {
-          plan.execute().foreachPartition { case x =>
+          plan.execute().foreachPartition { case x: Iterator[InternalRow] =>
             var sum: Long = 0
             while (x.hasNext) {
               sum += x.next().hashCode()

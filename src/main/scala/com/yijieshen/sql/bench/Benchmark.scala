@@ -154,6 +154,7 @@ abstract class Benchmark(@transient val sqlContext: SQLContext)
                 singleResult.failure.foreach { f =>
                   failures += 1
                   logMessage(s"Execution '${q.name}' failed: ${f.message}")
+                  logMessage(s"Execution stacktrace: ${f.stackTrace}")
                 }
                 singleResult.executionTime.foreach { time =>
                   logMessage(s"Execution time: ${time / 1000}s")

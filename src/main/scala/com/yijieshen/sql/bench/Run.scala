@@ -32,7 +32,7 @@ object Run {
               failure("query num should in [1, 50]")
             }
           } catch {
-            case e: NumberFormatException => sys.error("query num should be int seperated by comma")
+            case e: NumberFormatException => sys.error("query num should be int separated by comma")
           }
         }
         .text("query indices to run, separated by comma")

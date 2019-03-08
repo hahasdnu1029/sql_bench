@@ -37,7 +37,7 @@ class Query(
   }
 
   lazy val tablesInvolved = buildDataFrame.queryExecution.logical collect {
-    case UnresolvedRelation(tableIdentifier, _) => {
+    case UnresolvedRelation(tableIdentifier) => {
       // We are ignoring the database name.
       tableIdentifier.table
     }
@@ -75,14 +75,14 @@ class Query(
 
       val breakdownResults = if (includeBreakdown) {
         val depth = queryExecution.executedPlan.collect { case p: SparkPlan => p }.size
-        val physicalOperators = (0 until depth).map(i => (i, queryExecution.executedPlan(i)))
+        val physicalOperators = (0 until depth).map(i => (i, queryExecution.executedPlan.p(i)))
         val indexMap = physicalOperators.map { case (index, op) => (op, index) }.toMap
         val timeMap = new scala.collection.mutable.HashMap[Int, Double]
 
-        physicalOperators.reverse.take(1).map {
+        physicalOperators.reverse.map {
           case (index, node) =>
             messages += s"Breakdown: ${node.simpleString}"
-            val newNode = buildDataFrame.queryExecution.executedPlan(index)
+            val newNode = buildDataFrame.queryExecution.executedPlan.p(index)
 
             if (new java.io.File("/home/syj/free_memory.sh").exists) {
               val commands = Seq("bash", "-c", s"/home/syj/free_memory.sh")
@@ -116,7 +116,7 @@ class Query(
             case ExecutionMode.CollectResults => dataFrame.rdd.collect()
             case ExecutionMode.ForeachResults => dataFrame.rdd.foreach { row => Unit }
             case ExecutionMode.WriteParquet(location) =>
-              dataFrame.saveAsParquetFile(s"$location/$name.parquet")
+              dataFrame.write.parquet(s"$location/$name.parquet")
             case ExecutionMode.HashResults =>
               val columnStr = dataFrame.schema.map(_.name).mkString(",")
               // SELECT SUM(HASH(col1, col2, ...)) FROM (benchmark query)

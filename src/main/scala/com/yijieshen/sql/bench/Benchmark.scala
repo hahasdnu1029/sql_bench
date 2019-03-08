@@ -107,7 +107,7 @@ abstract class Benchmark(@transient val sqlContext: SQLContext)
           .flatMap { query =>
             try {
               query.newDataFrame().queryExecution.logical.collect {
-                case UnresolvedRelation(t, _) => t.table
+                case UnresolvedRelation(t) => t.table
               }
             } catch {
               // ignore the queries that can't be parsed

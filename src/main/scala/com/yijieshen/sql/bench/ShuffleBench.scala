@@ -65,9 +65,7 @@ object ShuffleBench {
     val sqlContext = new HiveContext(sc)
     import sqlContext.implicits._
 
-    val c: Column = if (config.tpe.toUpperCase.equals("INT")) {
-      randInt(Random.nextInt(), config.ci).as("c")
-    } else if (config.tpe.toUpperCase.equals("DOUBLE")) {
+    val c: Column = if (config.tpe.toUpperCase.equals("DOUBLE")) {
       rand().as("c")
     } else { // long
       pmod($"id", lit(config.cl)).as("c")
@@ -90,11 +88,7 @@ object ShuffleBench {
 
       val time = measureTimeMs {
         val plan = result.queryExecution.executedPlan
-        if (plan.outputsRowBatches) {
-          plan.batchExecute().foreach(b => Unit)
-        } else {
-          plan.execute().foreach(r => Unit)
-        }
+        plan.execute().foreach(r => Unit)
       }
       println(s"Shuffle takes ${time / 1000}s to finish.")
     }

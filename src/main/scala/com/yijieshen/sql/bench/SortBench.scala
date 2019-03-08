@@ -77,16 +77,12 @@ object SortBench {
 
       val time = measureTimeMs {
         val plan = result.queryExecution.executedPlan
-        if (plan.outputsRowBatches) {
-          plan.batchExecute().foreach(b => Unit)
-        } else {
-          plan.execute().foreachPartition { case x =>
-            var sum: Long = 0
-            while (x.hasNext) {
-              sum += x.next().hashCode()
-            }
-            println(sum)
+        plan.execute().foreachPartition { case x =>
+          var sum: Long = 0
+          while (x.hasNext) {
+            sum += x.next().hashCode()
           }
+          println(sum)
         }
       }
       println(s"Sort takes ${time / 1000}s to finish.")

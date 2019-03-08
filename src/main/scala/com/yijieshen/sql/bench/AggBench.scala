@@ -43,7 +43,7 @@ object AggBench {
         .text("print this usage text")
     }
     parser.parse(args, AggConfig()) match {
-      case Some(config) => run(config)
+      // case Some(config) => run(config)
       case None => System.exit(1)
     }
   }
@@ -54,7 +54,9 @@ object AggBench {
     val endTime = System.nanoTime()
     (endTime - startTime).toDouble / 1000000
   }
+}
 
+  /**
   def run(config: AggConfig): Unit = {
     val conf = new SparkConf().setAppName("AggBench")
     val sc = SparkContext.getOrCreate(conf)
@@ -95,4 +97,4 @@ object AggBench {
     }
     sc.stop()
   }
-}
+  */

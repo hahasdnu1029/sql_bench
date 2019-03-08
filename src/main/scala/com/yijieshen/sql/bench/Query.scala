@@ -93,11 +93,7 @@ class Query(
             }
 
             val executionTime = measureTimeMs {
-              if (newNode.outputsRowBatches) {
-                newNode.batchExecute().foreach((batch: Any) => Unit)
-              } else {
-                newNode.execute().foreach((row: Any) => Unit)
-              }
+              newNode.execute().foreach((row: Any) => Unit)
             }
             timeMap += ((index, executionTime))
 

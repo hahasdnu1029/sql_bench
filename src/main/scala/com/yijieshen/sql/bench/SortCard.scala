@@ -44,7 +44,7 @@ object SortCard {
         .text("print this usage text")
     }
     parser.parse(args, SortCardConfig()) match {
-      case Some(config) => run(config)
+      // case Some(config) => run(config)
       case None => System.exit(1)
     }
 
@@ -57,7 +57,7 @@ object SortCard {
     (endTime - startTime).toDouble / 1000000
   }
 
-  def run(config: SortCardConfig): Unit = {
+  /** def run(config: SortCardConfig): Unit = {
     val conf = new SparkConf().setAppName("SortCard")
     val sc = SparkContext.getOrCreate(conf)
     val sqlContext = new HiveContext(sc)
@@ -106,5 +106,5 @@ object SortCard {
       println(s"Sort takes ${time / 1000}s to finish.")
     }
     sc.stop()
-  }
+  } */
 }

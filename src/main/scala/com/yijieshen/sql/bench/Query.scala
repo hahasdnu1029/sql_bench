@@ -1,5 +1,7 @@
 package com.yijieshen.sql.bench
 
+import org.apache.spark.broadcast.Broadcast
+
 import scala.sys.process._
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
@@ -90,16 +92,20 @@ class Query(
             } else {
               System.err.println("free_memory script doesn't exists")
             }
-
+            println(newNode.getClass)
+            println(newNode.nodeName)
+            println(newNode.isInstanceOf[BroadcastExchangeExec])
+            var flag = newNode.isInstanceOf[BroadcastExchangeExec]
+            for (child <- newNode.children) {
+              if (child.isInstanceOf[BroadcastExchangeExec]) {
+                flag = true
+              }
+            }
             val executionTime = measureTimeMs {
-              newNode match {
-                case BroadcastExchangeExec(mode, child) => {
-                  newNode.executeBroadcast()
-                }
-                case _ => {
-                  newNode.execute().foreach((row: Any) => Unit)
-                }
-
+              if (flag) {
+                newNode.executeBroadcast().foreach((broadcat: Broadcast[Nothing]) => Unit)
+              } else {
+                newNode.execute().foreach((row: Any) => Unit)
               }
             }
             timeMap += ((index, executionTime))

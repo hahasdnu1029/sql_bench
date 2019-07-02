@@ -1,14 +1,14 @@
 package com.yijieshen.sql.bench
 
 import org.apache.spark.broadcast.Broadcast
-
-import scala.sys.process._
-import scala.collection.mutable.ArrayBuffer
-import scala.language.implicitConversions
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.execution.SparkPlan
-import org.apache.spark.sql.execution.exchange.BroadcastExchangeExec
+import org.apache.spark.sql.execution.exchange.{BroadcastExchangeExec, ShuffleExchangeExec}
+import org.apache.spark.sql.execution.{InputAdapter, SparkPlan, WholeStageCodegenExec}
+
+import scala.collection.mutable.ArrayBuffer
+import scala.language.implicitConversions
+import scala.sys.process._
 
 class Query(
              override val name: String,
@@ -80,18 +80,10 @@ class Query(
         val indexMap = physicalOperators.map { case (index, op) => (op, index) }.toMap
         val timeMap = new scala.collection.mutable.HashMap[Int, Double]
 
-        physicalOperators.reverse.map {
+        physicalOperators.reverse.take(80).map {
           case (index, node) =>
             messages += s"Breakdown: ${node.simpleString}"
             val newNode = buildDataFrame.queryExecution.executedPlan.p(index)
-
-            if (new java.io.File("/home/veetest/free_memory.sh").exists) {
-              val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
-              commands.!!
-              System.err.println("free_memory succeed")
-            } else {
-              System.err.println("free_memory script doesn't exists")
-            }
             println(newNode.getClass)
             println(newNode.nodeName)
             println(newNode.isInstanceOf[BroadcastExchangeExec])
@@ -103,9 +95,27 @@ class Query(
             }
             val executionTime = measureTimeMs {
               if (flag) {
-                newNode.executeBroadcast().foreach((broadcat: Broadcast[Nothing]) => Unit)
+                if (newNode.isInstanceOf[WholeStageCodegenExec] || newNode.isInstanceOf[ShuffleExchangeExec] || newNode.isInstanceOf[BroadcastExchangeExec] || newNode.isInstanceOf[InputAdapter]) {
+                  if (new java.io.File("/home/veetest/free_memory.sh").exists) {
+                    val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
+                    commands.!!
+                    System.err.println("free_memory succeed")
+                  } else {
+                    System.err.println("free_memory script doesn't exists")
+                  }
+                  newNode.executeBroadcast().foreach((broadcat: Broadcast[Nothing]) => Unit)
+                }
               } else {
-                newNode.execute().foreach((row: Any) => Unit)
+                if (newNode.isInstanceOf[WholeStageCodegenExec] || newNode.isInstanceOf[ShuffleExchangeExec] || newNode.isInstanceOf[BroadcastExchangeExec] || newNode.isInstanceOf[InputAdapter]) {
+                  if (new java.io.File("/home/veetest/free_memory.sh").exists) {
+                    val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
+                    commands.!!
+                    System.err.println("free_memory succeed")
+                  } else {
+                    System.err.println("free_memory script doesn't exists")
+                  }
+                  newNode.execute().foreach((row: Any) => Unit)
+                }
               }
             }
             timeMap += ((index, executionTime))

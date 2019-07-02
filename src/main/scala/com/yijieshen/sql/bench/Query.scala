@@ -38,7 +38,7 @@ class Query(
   }
 
   lazy val tablesInvolved = buildDataFrame.queryExecution.logical collect {
-    case UnresolvedRelation(tableIdentifier) => {
+    case UnresolvedRelation(tableIdentifier, _) => {
       // We are ignoring the database name.
       tableIdentifier.table
     }

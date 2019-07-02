@@ -47,9 +47,9 @@ class Query(
   def newDataFrame() = buildDataFrame
 
   protected override def doBenchmark(
-                                      includeBreakdown: Boolean,
-                                      description: String = "",
-                                      messages: ArrayBuffer[String]): BenchmarkResult = {
+      includeBreakdown: Boolean,
+      description: String = "",
+      messages: ArrayBuffer[String]): BenchmarkResult = {
     try {
       val dataFrame = buildDataFrame
       val queryExecution = dataFrame.queryExecution
@@ -76,34 +76,26 @@ class Query(
 
       val breakdownResults = if (includeBreakdown) {
         val depth = queryExecution.executedPlan.collect { case p: SparkPlan => p }.size
-        val physicalOperators = (0 until depth).map(i => (i, queryExecution.executedPlan.p(i)))
+        val physicalOperators = (0 until depth).map(i => (i, queryExecution.executedPlan(i)))
         val indexMap = physicalOperators.map { case (index, op) => (op, index) }.toMap
         val timeMap = new scala.collection.mutable.HashMap[Int, Double]
 
-        physicalOperators.reverse.map {
+        physicalOperators.reverse.take(1).map {
           case (index, node) =>
             messages += s"Breakdown: ${node.simpleString}"
-            val newNode = buildDataFrame.queryExecution.executedPlan.p(index)
+            val newNode = buildDataFrame.queryExecution.executedPlan(index)
 
-            if (new java.io.File("/home/veetest/free_memory.sh").exists) {
-              val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
+            if (new java.io.File("/home/syj/free_memory.sh").exists) {
+              val commands = Seq("bash", "-c", s"/home/syj/free_memory.sh")
               commands.!!
               System.err.println("free_memory succeed")
             } else {
               System.err.println("free_memory script doesn't exists")
             }
-            println(newNode.getClass)
-            println(newNode.nodeName)
-            println(newNode.isInstanceOf[BroadcastExchangeExec])
-            var flag = newNode.isInstanceOf[BroadcastExchangeExec]
-            for (child <- newNode.children) {
-              if (child.isInstanceOf[BroadcastExchangeExec]) {
-                flag = true
-              }
-            }
+
             val executionTime = measureTimeMs {
-              if (flag) {
-                newNode.executeBroadcast().foreach((broadcat: Broadcast[Nothing]) => Unit)
+              if (newNode.outputsRowBatches) {
+                newNode.batchExecute().foreach((batch: Any) => Unit)
               } else {
                 newNode.execute().foreach((row: Any) => Unit)
               }
@@ -129,16 +121,16 @@ class Query(
             case ExecutionMode.CollectResults => dataFrame.rdd.collect()
             case ExecutionMode.ForeachResults => dataFrame.rdd.foreach { row => Unit }
             case ExecutionMode.WriteParquet(location) =>
-              dataFrame.write.parquet(s"$location/$name.parquet")
+              dataFrame.saveAsParquetFile(s"$location/$name.parquet")
             case ExecutionMode.HashResults =>
               val columnStr = dataFrame.schema.map(_.name).mkString(",")
               // SELECT SUM(HASH(col1, col2, ...)) FROM (benchmark query)
               val row =
-                dataFrame
-                  .selectExpr(s"hash($columnStr) as hashValue")
-                  .groupBy()
-                  .sum("hashValue")
-                  .head()
+              dataFrame
+                .selectExpr(s"hash($columnStr) as hashValue")
+                .groupBy()
+                .sum("hashValue")
+                .head()
               result = if (row.isNullAt(0)) None else Some(row.getLong(0))
           }
         }
@@ -180,9 +172,9 @@ class Query(
 
 object Query {
   def apply(
-             name: String,
-             dataFrameBuilder: => DataFrame,
-             description: String): Query = {
+    name: String,
+    dataFrameBuilder: => DataFrame,
+    description: String): Query = {
     new Query(name, dataFrameBuilder, description, None, ExecutionMode.ForeachResults)
   }
 }

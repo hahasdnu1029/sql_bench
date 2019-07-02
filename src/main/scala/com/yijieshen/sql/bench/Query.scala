@@ -1,10 +1,8 @@
 package com.yijieshen.sql.bench
 
 import scala.sys.process._
-
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
-
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.execution.SparkPlan
@@ -84,14 +82,15 @@ class Query(
             messages += s"Breakdown: ${node.simpleString}"
             val newNode = buildDataFrame.queryExecution.executedPlan(index)
 
-            if (new java.io.File("/home/syj/free_memory.sh").exists) {
-              val commands = Seq("bash", "-c", s"/home/syj/free_memory.sh")
+            if (new java.io.File("/home/veetest/free_memory.sh").exists) {
+              val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
               commands.!!
               System.err.println("free_memory succeed")
             } else {
               System.err.println("free_memory script doesn't exists")
             }
-
+            println(newNode.getClass)
+            println(newNode.nodeName)
             val executionTime = measureTimeMs {
               if (newNode.outputsRowBatches) {
                 newNode.batchExecute().foreach((batch: Any) => Unit)

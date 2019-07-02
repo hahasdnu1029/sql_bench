@@ -1,20 +1,19 @@
 package com.yijieshen.sql.bench
 
 import scala.sys.process._
-
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
-
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.exchange.BroadcastExchangeExec
 
 class Query(
-  override val name: String,
-  buildDataFrame: => DataFrame,
-  val description: String = "",
-  val sqlText: Option[String] = None,
-  override val executionMode: ExecutionMode = ExecutionMode.ForeachResults)
+             override val name: String,
+             buildDataFrame: => DataFrame,
+             val description: String = "",
+             val sqlText: Option[String] = None,
+             override val executionMode: ExecutionMode = ExecutionMode.ForeachResults)
   extends Benchmarkable with Serializable {
 
   protected implicit def toOption[A](a: A): Option[A] = Option(a)
@@ -46,9 +45,9 @@ class Query(
   def newDataFrame() = buildDataFrame
 
   protected override def doBenchmark(
-      includeBreakdown: Boolean,
-      description: String = "",
-      messages: ArrayBuffer[String]): BenchmarkResult = {
+                                      includeBreakdown: Boolean,
+                                      description: String = "",
+                                      messages: ArrayBuffer[String]): BenchmarkResult = {
     try {
       val dataFrame = buildDataFrame
       val queryExecution = dataFrame.queryExecution
@@ -93,7 +92,15 @@ class Query(
             }
 
             val executionTime = measureTimeMs {
-              newNode.execute().foreach((row: Any) => Unit)
+              newNode match {
+                case BroadcastExchangeExec(mode, child) => {
+                  newNode.executeBroadcast()
+                }
+                case _ => {
+                  newNode.execute().foreach((row: Any) => Unit)
+                }
+
+              }
             }
             timeMap += ((index, executionTime))
 
@@ -121,11 +128,11 @@ class Query(
               val columnStr = dataFrame.schema.map(_.name).mkString(",")
               // SELECT SUM(HASH(col1, col2, ...)) FROM (benchmark query)
               val row =
-              dataFrame
-                .selectExpr(s"hash($columnStr) as hashValue")
-                .groupBy()
-                .sum("hashValue")
-                .head()
+                dataFrame
+                  .selectExpr(s"hash($columnStr) as hashValue")
+                  .groupBy()
+                  .sum("hashValue")
+                  .head()
               result = if (row.isNullAt(0)) None else Some(row.getLong(0))
           }
         }
@@ -167,9 +174,9 @@ class Query(
 
 object Query {
   def apply(
-    name: String,
-    dataFrameBuilder: => DataFrame,
-    description: String): Query = {
+             name: String,
+             dataFrameBuilder: => DataFrame,
+             description: String): Query = {
     new Query(name, dataFrameBuilder, description, None, ExecutionMode.ForeachResults)
   }
 }

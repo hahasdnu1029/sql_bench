@@ -4,7 +4,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.execution.exchange.{BroadcastExchangeExec, ShuffleExchangeExec}
-import org.apache.spark.sql.execution.{InputAdapter, SparkPlan}
+import org.apache.spark.sql.execution.{InputAdapter, SparkPlan, WholeStageCodegenExec}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
@@ -80,13 +80,12 @@ class Query(
         val indexMap = physicalOperators.map { case (index, op) => (op, index) }.toMap
         val timeMap = new scala.collection.mutable.HashMap[Int, Double]
 
-        physicalOperators.reverse.take(54).map {
+        physicalOperators.reverse.take(80).map {
           case (index, node) =>
             messages += s"Breakdown: ${node.simpleString}"
             val newNode = buildDataFrame.queryExecution.executedPlan.p(index)
             println(newNode.getClass)
             println(newNode.nodeName)
-            println(newNode.isInstanceOf[BroadcastExchangeExec])
             var flag = newNode.isInstanceOf[BroadcastExchangeExec]
             for (child <- newNode.children) {
               if (child.isInstanceOf[BroadcastExchangeExec]) {
@@ -95,8 +94,8 @@ class Query(
             }
             val executionTime = measureTimeMs {
               if (flag) {
-                if (newNode.isInstanceOf[ShuffleExchangeExec] || newNode.isInstanceOf[BroadcastExchangeExec] || newNode.isInstanceOf[InputAdapter]) {
-                  if (new java.io.File("/home/veetest/free_memory.sh").exists) {
+                if (newNode.isInstanceOf[InputAdapter] || newNode.isInstanceOf[ShuffleExchangeExec] || newNode.isInstanceOf[BroadcastExchangeExec]) {
+                  if (newNode.isInstanceOf[WholeStageCodegenExec] || new java.io.File("/home/veetest/free_memory.sh").exists) {
                     val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
                     commands.!!
                     System.err.println("free_memory succeed")
@@ -106,7 +105,7 @@ class Query(
                   newNode.executeBroadcast().foreach((broadcat: Broadcast[Nothing]) => Unit)
                 }
               } else {
-                if (newNode.isInstanceOf[ShuffleExchangeExec] || newNode.isInstanceOf[BroadcastExchangeExec] || newNode.isInstanceOf[InputAdapter]) {
+                if (newNode.isInstanceOf[InputAdapter] || newNode.isInstanceOf[WholeStageCodegenExec] || newNode.isInstanceOf[ShuffleExchangeExec] || newNode.isInstanceOf[BroadcastExchangeExec]) {
                   if (new java.io.File("/home/veetest/free_memory.sh").exists) {
                     val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
                     commands.!!

@@ -1,11 +1,13 @@
 package com.yijieshen.sql.bench
 
-import scala.sys.process._
-import scala.collection.mutable.ArrayBuffer
-import scala.language.implicitConversions
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.vector.{BatchProject, BatchSortMergeJoin, BufferedBatchExchange, PureBatchSort2}
+
+import scala.collection.mutable.ArrayBuffer
+import scala.language.implicitConversions
+import scala.sys.process._
 
 class Query(
   override val name: String,
@@ -77,25 +79,33 @@ class Query(
         val indexMap = physicalOperators.map { case (index, op) => (op, index) }.toMap
         val timeMap = new scala.collection.mutable.HashMap[Int, Double]
 
-        physicalOperators.reverse.take(20).map {
+        physicalOperators.reverse.take(80).map {
           case (index, node) =>
             messages += s"Breakdown: ${node.simpleString}"
             val newNode = buildDataFrame.queryExecution.executedPlan(index)
-
-            if (new java.io.File("/home/veetest/free_memory.sh").exists) {
-              val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
-              commands.!!
-              System.err.println("free_memory succeed")
-            } else {
-              System.err.println("free_memory script doesn't exists")
-            }
             println(newNode.getClass)
             println(newNode.nodeName)
             val executionTime = measureTimeMs {
-              if (newNode.outputsRowBatches) {
-                newNode.batchExecute().foreach((batch: Any) => Unit)
-              } else {
-                newNode.execute().foreach((row: Any) => Unit)
+              if(newNode.isInstanceOf[BufferedBatchExchange] || newNode.isInstanceOf[BatchProject] || newNode.isInstanceOf[BatchSortMergeJoin] || newNode.isInstanceOf[PureBatchSort2]) {
+                if (newNode.outputsRowBatches) {
+                  if (new java.io.File("/home/veetest/free_memory.sh").exists) {
+                    val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
+                    commands.!!
+                    System.err.println("free_memory succeed")
+                  } else {
+                    System.err.println("free_memory script doesn't exists")
+                  }
+                  newNode.batchExecute().foreach((batch: Any) => Unit)
+                } else {
+                  if (new java.io.File("/home/veetest/free_memory.sh").exists) {
+                    val commands = Seq("bash", "-c", s"/home/veetest/free_memory.sh")
+                    commands.!!
+                    System.err.println("free_memory succeed")
+                  } else {
+                    System.err.println("free_memory script doesn't exists")
+                  }
+                  newNode.execute().foreach((row: Any) => Unit)
+                }
               }
             }
             timeMap += ((index, executionTime))

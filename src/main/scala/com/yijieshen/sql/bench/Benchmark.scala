@@ -148,6 +148,7 @@ abstract class Benchmark(@transient val sqlContext: SQLContext)
 
                 startTime = System.currentTimeMillis()
 
+                // bench开始执行
                 val singleResult =
                   q.benchmark(includeBreakdown, setup, currentMessages, timeout)
 

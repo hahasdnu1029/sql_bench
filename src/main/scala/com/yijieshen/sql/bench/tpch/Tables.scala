@@ -1,10 +1,9 @@
 package com.yijieshen.sql.bench.tpch
 
 import scala.sys.process._
-
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{SaveMode, Row, SQLContext}
-import org.apache.spark.sql.types._
+import org.apache.spark.sql.{Row, SQLContext, SaveMode}
+import org.apache.spark.sql.types.{StructField, _}
 
 // TODO dbgen should output directly to stdout instead of file
 class Tables(sqlContext: SQLContext) extends Serializable {
@@ -153,10 +152,146 @@ class Tables(sqlContext: SQLContext) extends Serializable {
       writer.save(location)
       sqlContext.dropTempTable(tempTableName)
     }
+    def createTemporaryTable(location: String, tableName:String ,format: String): Unit = {
+      if(format.equals("text")){
+        if(tableName.equals("lineitem")){
+          var rdd = sparkContext.textFile(location+"/"+tableName+".tbl").map(x=>x.split("|"))
+          val rowRDD = rdd.map(p => Row(p(0).toLong, p(1).toInt,p(2).toInt, p(3).toInt,p(4).toDouble,p(5).toDouble,p(6).toDouble,p(7).toDouble,p(8),p(9),p(10),p(11),p(12),p(13),p(14),p(15)))
+          val schema = StructType(
+            List(
+              StructField("l_orderkey", LongType, true),
+              StructField("l_partkey", IntegerType, true),
+              StructField("l_suppkey", IntegerType, true),
+              StructField("l_linenumber", IntegerType, true),
+              StructField("l_quantity", DoubleType, true),
+              StructField("l_extendedprice", DoubleType, true),
+              StructField("l_discount", DoubleType, true),
+              StructField("l_tax", DoubleType, true),
+              StructField("l_returnflag", StringType, true),
+              StructField("l_linestatus", StringType, true),
+              StructField("l_shipdate", StringType, true),
+              StructField("l_commitdate", StringType, true),
+              StructField("l_receiptdate", StringType, true),
+              StructField("l_shipinstruct", StringType, true),
+              StructField("l_shipmode", StringType, true),
+              StructField("l_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD,schema).registerTempTable(name)
+        }
+        if(tableName.equals("orders")){
+          var rdd = sparkContext.textFile(location+"/"+tableName+".tbl").map(x=>x.split("|"))
+          val rowRDD = rdd.map(p => Row(p(0).toLong, p(1).toInt,p(2), p(3).toDouble,p(4),p(5),p(6),p(7).toInt,p(8)))
+          val schema = StructType(
+            List(
+              StructField("o_orderkey", LongType, true),
+              StructField("o_custkey", IntegerType, true),
+              StructField("o_orderstatus", StringType, true),
+              StructField("o_totalprice", DoubleType, true),
+              StructField("o_orderdate", StringType, true),
+              StructField("o_orderpriority", StringType, true),
+              StructField("o_clerk", StringType, true),
+              StructField("o_shippriority", IntegerType, true),
+              StructField("o_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD,schema).registerTempTable(name)
+        }
+        if(tableName.equals("partsupp")){
+          var rdd = sparkContext.textFile(location+"/"+tableName+".tbl").map(x=>x.split("|"))
+          val rowRDD = rdd.map(p => Row(p(0).toInt, p(1).toInt,p(2).toInt, p(3).toDouble,p(4)))
+          val schema = StructType(
+            List(
+              StructField("ps_partkey", IntegerType, true),
+              StructField("ps_suppkey", IntegerType, true),
+              StructField("ps_availqty", IntegerType, true),
+              StructField("ps_supplycost", DoubleType, true),
+              StructField("ps_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD,schema).registerTempTable(name)
+        }
+        if(tableName.equals("customer")){
+          var rdd = sparkContext.textFile(location+"/"+tableName+".tbl").map(x=>x.split("|"))
+          val rowRDD = rdd.map(p => Row(p(0).toInt, p(1),p(2), p(3).toInt,p(4),p(5).toDouble,p(6),p(7)))
+          val schema = StructType(
+            List(
+              StructField("c_custkey", IntegerType, true),
+              StructField("c_name", StringType, true),
+              StructField("c_address", StringType, true),
+              StructField("c_nationkey", IntegerType, true),
+              StructField("c_phone", StringType, true),
+              StructField("c_acctbal", DoubleType, true),
+              StructField("c_mktsegment", StringType, true),
+              StructField("c_comment", StringType, true)
 
-    def createTemporaryTable(location: String, format: String): Unit = {
-      // println(s"Creating temporary table $name using data stored in $location.")
-      sqlContext.read.format(format).load(location).registerTempTable(name)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD,schema).registerTempTable(name)
+        }
+        if(tableName.equals("part")){
+          var rdd = sparkContext.textFile(location+"/"+tableName+".tbl").map(x=>x.split("|"))
+          val rowRDD = rdd.map(p => Row(p(0).toInt, p(1),p(2), p(3),p(4),p(5).toInt,p(6),p(7).toDouble,p(8)))
+          val schema = StructType(
+            List(
+              StructField("p_partkey", IntegerType, true),
+              StructField("p_name", StringType, true),
+              StructField("p_mfgr", StringType, true),
+              StructField("p_brand", StringType, true),
+              StructField("p_type", StringType, true),
+              StructField("p_size", IntegerType, true),
+              StructField("p_container", StringType, true),
+              StructField("p_retailprice", DoubleType, true),
+              StructField("p_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD,schema).registerTempTable(name)
+        }
+        if(tableName.equals("supplier")){
+          var rdd = sparkContext.textFile(location+"/"+tableName+".tbl").map(x=>x.split("|"))
+          val rowRDD = rdd.map(p => Row(p(0).toInt, p(1),p(2), p(3).toInt,p(4),p(5).toDouble,p(6)))
+          val schema = StructType(
+            List(
+              StructField("s_suppkey", IntegerType, true),
+              StructField("s_name", StringType, true),
+              StructField("s_address", StringType, true),
+              StructField("s_nationkey", IntegerType, true),
+              StructField("s_phone", StringType, true),
+              StructField("s_acctbal", DoubleType, true),
+              StructField("s_acctbal", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD,schema).registerTempTable(name)
+        }
+        if(tableName.equals("nation")){
+          var rdd = sparkContext.textFile(location+"/"+tableName+".tbl").map(x=>x.split("|"))
+          val rowRDD = rdd.map(p => Row(p(0).toInt, p(1),p(2).toInt, p(3)))
+          val schema = StructType(
+            List(
+              StructField("n_nationkey", IntegerType, true),
+              StructField("n_name", StringType, true),
+              StructField("n_regionkey", IntegerType, true),
+              StructField("n_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD,schema).registerTempTable(name)
+
+        }
+        if(tableName.equals("region")){
+          var rdd = sparkContext.textFile(location+"/"+tableName+".tbl").map(x=>x.split("|"))
+          val rowRDD = rdd.map(p => Row(p(0).toInt, p(1),p(2)))
+          val schema = StructType(
+            List(
+              StructField("r_regionkey", IntegerType, true),
+              StructField("r_name", StringType, true),
+              StructField("r_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD,schema).registerTempTable(name)
+        }
+      }else{
+        sqlContext.read.format(format).load(location).registerTempTable(name)
+      }
     }
   }
 
@@ -208,7 +343,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
     }
     filtered.foreach { table =>
       val tableLocation = s"$location/${table.name}"
-      table.createTemporaryTable(tableLocation, format)
+      table.createTemporaryTable(tableLocation,table.name, format)
     }
   }
 
@@ -280,7 +415,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
       's_nationkey            .int,
       's_phone                .string,
       's_acctbal              .double,
-      's_comment              .string),
+      's_acctbal              .string),
     Table("nation", "n", false,
       partitionColumns = Nil,
       'n_nationkey            .int,

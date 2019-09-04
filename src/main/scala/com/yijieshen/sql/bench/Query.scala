@@ -45,6 +45,7 @@ class Query(
 
   def newDataFrame() = buildDataFrame
 
+  // 执行query
   protected override def doBenchmark(
       includeBreakdown: Boolean,
       description: String = "",

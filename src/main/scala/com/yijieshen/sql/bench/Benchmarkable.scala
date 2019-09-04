@@ -22,6 +22,7 @@ trait Benchmarkable {
       timeout: Long): BenchmarkResult = {
     sparkContext.setJobDescription(s"Execution: $name, $description")
     beforeBenchmark()
+    // 执行
     val result = runBenchmark(includeBreakdown, description, messages, timeout)
     afterBenchmark(sqlContext.sparkContext)
     result

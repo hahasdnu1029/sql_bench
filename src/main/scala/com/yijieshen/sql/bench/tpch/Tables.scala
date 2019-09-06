@@ -157,7 +157,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
     def createTemporaryTable(location: String, tableName: String, format: String): Unit = {
       if (format.equals("text")) {
         if (tableName.equals("lineitem")) {
-          var rdd = sparkContext.textFile(location + "/" + tableName + ".tbl").map(x => x.split('|'))
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
           rdd.map(println(_))
           var rowRDD = rdd.map(p => Row(p(0).toLong, p(1).toInt, p(2).toInt, p(3).toInt, p(4).toDouble, p(5).toDouble, p(6).toDouble, p(7).toDouble, p(8).trim, p(9).trim, p(10).trim, p(11).trim, p(12).trim, p(13).trim, p(14).trim, p(15).trim))
           var schema = StructType(
@@ -183,7 +183,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
           sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
         }
         if (tableName.equals("orders")) {
-          var rdd = sparkContext.textFile(location + "/" + tableName + ".tbl").map(x => x.split('|'))
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
           rdd.map(println(_))
           var rowRDD = rdd.map(p => Row(p(0).toLong, p(1).toInt, p(2).trim, p(3).toDouble, p(4).trim, p(5).trim, p(6).trim, p(7).toInt, p(8).trim))
           var schema = StructType(
@@ -202,7 +202,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
           sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
         }
         if (tableName.equals("partsupp")) {
-          var rdd = sparkContext.textFile(location + "/" + tableName + ".tbl").map(x => x.split('|'))
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
           rdd.map(println(_))
           var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).toInt, p(2).toInt, p(3).toDouble, p(4).trim))
           var schema = StructType(
@@ -217,7 +217,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
           sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
         }
         if (tableName.equals("customer")) {
-          var rdd = sparkContext.textFile(location + "/" + tableName + ".tbl").map(x => x.split('|'))
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
           rdd.map(println(_))
           var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).trim, p(3).toInt, p(4).trim, p(5).toDouble, p(6).trim, p(7).trim))
           var schema = StructType(
@@ -236,7 +236,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
           sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
         }
         if (tableName.equals("part")) {
-          var rdd = sparkContext.textFile(location + "/" + tableName + ".tbl").map(x => x.split('|'))
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
           rdd.map(println(_))
           var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).trim, p(3).trim, p(4).trim, p(5).toInt, p(6).trim, p(7).toDouble, p(8).trim))
           var schema = StructType(
@@ -255,7 +255,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
           sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
         }
         if (tableName.equals("supplier")) {
-          var rdd = sparkContext.textFile(location + "/" + tableName + ".tbl").map(x => x.split('|'))
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
           rdd.map(println(_))
           var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).trim, p(3).toInt, p(4).trim, p(5).toDouble, p(6).trim))
           var schema = StructType(
@@ -272,7 +272,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
           sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
         }
         if (tableName.equals("nation")) {
-          var rdd = sparkContext.textFile(location + "/" + tableName + ".tbl").map(x => x.split('|'))
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
           rdd.map(println(_))
           var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).toInt, p(3).trim))
           var schema = StructType(
@@ -287,7 +287,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
 
         }
         if (tableName.equals("region")) {
-          var rdd = sparkContext.textFile(location + "/" + tableName + ".tbl").map(x => x.split('|'))
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
           rdd.map(println(_))
           var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).trim))
           var schema = StructType(

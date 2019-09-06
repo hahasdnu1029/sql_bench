@@ -188,6 +188,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
           var rowRDD = rdd.map(p => Row(p(0).toLong, p(1).toInt, p(2).trim, p(3).toDouble, p(4).trim, p(5).trim, p(6).trim, p(7).toInt, p(8).trim))
           var schema = StructType(
             List(
+
               StructField("o_orderkey", LongType, true),
               StructField("o_custkey", IntegerType, true),
               StructField("o_orderstatus", StringType, true),

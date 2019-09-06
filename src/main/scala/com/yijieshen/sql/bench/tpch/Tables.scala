@@ -296,7 +296,6 @@ class Tables(sqlContext: SQLContext) extends Serializable {
               StructField("r_regionkey", IntegerType, true),
               StructField("r_name", StringType, true),
               StructField("r_comment", StringType, true)
-
             )
           )
           sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)

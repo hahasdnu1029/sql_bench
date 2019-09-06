@@ -154,9 +154,154 @@ class Tables(sqlContext: SQLContext) extends Serializable {
       sqlContext.dropTempTable(tempTableName)
     }
 
-    def createTemporaryTable(location: String, format: String): Unit = {
-      // println(s"Creating temporary table $name using data stored in $location.")
-      sqlContext.read.format(format).load(location).registerTempTable(name)
+    def createTemporaryTable(location: String, tableName:String,format: String): Unit = {
+      if (format.equals("text")) {
+        if (tableName.equals("lineitem")) {
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
+          rdd.map(println(_))
+          var rowRDD = rdd.map(p => Row(p(0).toLong, p(1).toInt, p(2).toInt, p(3).toInt, p(4).toDouble, p(5).toDouble, p(6).toDouble, p(7).toDouble, p(8).trim, p(9).trim, p(10).trim, p(11).trim, p(12).trim, p(13).trim, p(14).trim, p(15).trim))
+          var schema = StructType(
+            List(
+              StructField("l_orderkey", LongType, true),
+              StructField("l_partkey", IntegerType, true),
+              StructField("l_suppkey", IntegerType, true),
+              StructField("l_linenumber", IntegerType, true),
+              StructField("l_quantity", DoubleType, true),
+              StructField("l_extendedprice", DoubleType, true),
+              StructField("l_discount", DoubleType, true),
+              StructField("l_tax", DoubleType, true),
+              StructField("l_returnflag", StringType, true),
+              StructField("l_linestatus", StringType, true),
+              StructField("l_shipdate", StringType, true),
+              StructField("l_commitdate", StringType, true),
+              StructField("l_receiptdate", StringType, true),
+              StructField("l_shipinstruct", StringType, true),
+              StructField("l_shipmode", StringType, true),
+              StructField("l_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
+        }
+        if (tableName.equals("orders")) {
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
+          rdd.map(println(_))
+          var rowRDD = rdd.map(p => Row(p(0).toLong, p(1).toInt, p(2).trim, p(3).toDouble, p(4).trim, p(5).trim, p(6).trim, p(7).toInt, p(8).trim))
+          var schema = StructType(
+            List(
+              StructField("o_orderkey", LongType, true),
+              StructField("o_custkey", IntegerType, true),
+              StructField("o_orderstatus", StringType, true),
+              StructField("o_totalprice", DoubleType, true),
+              StructField("o_orderdate", StringType, true),
+              StructField("o_orderpriority", StringType, true),
+              StructField("o_clerk", StringType, true),
+              StructField("o_shippriority", IntegerType, true),
+              StructField("o_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
+        }
+        if (tableName.equals("partsupp")) {
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
+          rdd.map(println(_))
+          var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).toInt, p(2).toInt, p(3).toDouble, p(4).trim))
+          var schema = StructType(
+            List(
+              StructField("ps_partkey", IntegerType, true),
+              StructField("ps_suppkey", IntegerType, true),
+              StructField("ps_availqty", IntegerType, true),
+              StructField("ps_supplycost", DoubleType, true),
+              StructField("ps_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
+        }
+        if (tableName.equals("customer")) {
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
+          rdd.map(println(_))
+          var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).trim, p(3).toInt, p(4).trim, p(5).toDouble, p(6).trim, p(7).trim))
+          var schema = StructType(
+            List(
+              StructField("c_custkey", IntegerType, true),
+              StructField("c_name", StringType, true),
+              StructField("c_address", StringType, true),
+              StructField("c_nationkey", IntegerType, true),
+              StructField("c_phone", StringType, true),
+              StructField("c_acctbal", DoubleType, true),
+              StructField("c_mktsegment", StringType, true),
+              StructField("c_comment", StringType, true)
+
+            )
+          )
+          sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
+        }
+        if (tableName.equals("part")) {
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
+          rdd.map(println(_))
+          var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).trim, p(3).trim, p(4).trim, p(5).toInt, p(6).trim, p(7).toDouble, p(8).trim))
+          var schema = StructType(
+            List(
+              StructField("p_partkey", IntegerType, true),
+              StructField("p_name", StringType, true),
+              StructField("p_mfgr", StringType, true),
+              StructField("p_brand", StringType, true),
+              StructField("p_type", StringType, true),
+              StructField("p_size", IntegerType, true),
+              StructField("p_container", StringType, true),
+              StructField("p_retailprice", DoubleType, true),
+              StructField("p_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
+        }
+        if (tableName.equals("supplier")) {
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
+          rdd.map(println(_))
+          var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).trim, p(3).toInt, p(4).trim, p(5).toDouble, p(6).trim))
+          var schema = StructType(
+            List(
+              StructField("s_suppkey", IntegerType, true),
+              StructField("s_name", StringType, true),
+              StructField("s_address", StringType, true),
+              StructField("s_nationkey", IntegerType, true),
+              StructField("s_phone", StringType, true),
+              StructField("s_acctbal", DoubleType, true),
+              StructField("s_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
+        }
+        if (tableName.equals("nation")) {
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
+          rdd.map(println(_))
+          var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).toInt, p(3).trim))
+          var schema = StructType(
+            List(
+              StructField("n_nationkey", IntegerType, true),
+              StructField("n_name", StringType, true),
+              StructField("n_regionkey", IntegerType, true),
+              StructField("n_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
+
+        }
+        if (tableName.equals("region")) {
+          var rdd = sparkContext.textFile(location).map(x => x.split('|'))
+          rdd.map(println(_))
+          var rowRDD = rdd.map(p => Row(p(0).toInt, p(1).trim, p(2).trim))
+          var schema = StructType(
+            List(
+              StructField("r_regionkey", IntegerType, true),
+              StructField("r_name", StringType, true),
+              StructField("r_comment", StringType, true)
+            )
+          )
+          sqlContext.createDataFrame(rowRDD, schema).registerTempTable(name)
+        }
+      } else {
+        sqlContext.read.format(format).load(location).registerTempTable(name)
+      }
     }
   }
 
@@ -208,7 +353,7 @@ class Tables(sqlContext: SQLContext) extends Serializable {
     }
     filtered.foreach { table =>
       val tableLocation = s"$location/${table.name}"
-      table.createTemporaryTable(tableLocation, format)
+      table.createTemporaryTable(tableLocation, table.name,format)
     }
   }
 
